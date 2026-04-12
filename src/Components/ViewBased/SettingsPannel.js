@@ -10,7 +10,7 @@ import json5 from 'json5';
 
 import ShareDialog         from '../ShareDialog';
 import { postJsonData }    from '../../Functions/ApiService';
-import { useCFToken }      from '../../context/TurnstileContext';
+import { useTurnstile }    from '../../context/TurnstileContext';
 import { useNotification } from '../../context/NotificationContext';
 import { DOWNLOAD_FILENAME } from '../../config/constants';
 
@@ -36,7 +36,7 @@ const SettingsPannel = ({
   enableEditing,     setEnableEditing,
   modJSON,
 }) => {
-  const cfToken  = useCFToken();
+  const { requestToken } = useTurnstile();
   const { notify } = useNotification();
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -63,10 +63,14 @@ const SettingsPannel = ({
   };
 
   const handleShare = async () => {
+    // Trigger interactive Turnstile challenge before the API call
+    const token = await requestToken();
+    if (!token) return; // user cancelled challenge
+
     setSharing(true);
     try {
       const parsed = json5.parse(modJSON);
-      const result = await postJsonData(parsed, cfToken);
+      const result = await postJsonData(parsed, token);
       setShareResult(result.data);
       setShareError(null);
     } catch (err) {

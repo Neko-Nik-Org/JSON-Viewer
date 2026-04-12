@@ -1,74 +1,91 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Box, Chip } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlineIcon       from '@mui/icons-material/ErrorOutline';
 import { isValidJSON } from '../../Functions/JsonBased';
 
-// Approximate height taken by everything above the textarea
-const HEADER_HEIGHT = 104; // header bar (56) + toolbar (48)
+// Height of everything above this component: sticky header (56px) + toolbar (49px)
+const ABOVE_PX = 105;
 
 const InputTextArea = ({ jsonData, setJsonData }) => {
-  const textareaRef = useRef(null);
-  const theme       = useTheme();
-  const isDark      = theme.palette.mode === 'dark';
+  const theme  = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const isEmpty = !jsonData.trim();
   const isValid = !isEmpty && isValidJSON(jsonData);
 
-  // ── Dynamic height ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const resize = () => {
-      if (!textareaRef.current) return;
-      textareaRef.current.style.height = `${window.innerHeight - HEADER_HEIGHT}px`;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
-
-  // ── Border colour driven by validity ──────────────────────────────────────
+  // Validity-driven border colour
   const borderColor = isEmpty
-    ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)')
+    ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.14)')
     : isValid
       ? (isDark ? '#4ade80' : '#16a34a')
       : (isDark ? '#f87171' : '#dc2626');
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      {/* Validity badge */}
+    <Box
+      sx={{
+        display:       'flex',
+        flexDirection: 'column',
+        height:        `calc(100vh - ${ABOVE_PX}px)`,
+        border:        `1.5px solid ${borderColor}`,
+        transition:    'border-color 0.25s ease',
+        overflow:      'hidden',
+      }}
+    >
+      {/* ── Status strip (only when content is present) ─────────────────── */}
       {!isEmpty && (
-        <Box sx={{ position: 'absolute', top: 10, right: 16, zIndex: 10 }}>
+        <Box
+          sx={{
+            flexShrink:  0,
+            display:     'flex',
+            alignItems:  'center',
+            justifyContent: 'flex-end',
+            px:          2,
+            py:          0.6,
+            bgcolor:     isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)',
+            borderBottom: `1px solid ${borderColor}`,
+          }}
+        >
           <Chip
-            icon={isValid ? <CheckCircleOutlineIcon fontSize="small" /> : <ErrorOutlineIcon fontSize="small" />}
+            icon={isValid
+              ? <CheckCircleOutlineIcon fontSize="small" />
+              : <ErrorOutlineIcon       fontSize="small" />
+            }
             label={isValid ? 'Valid JSON' : 'Invalid JSON'}
             size="small"
             color={isValid ? 'success' : 'error'}
             variant="outlined"
-            sx={{ fontWeight: 600, fontSize: '0.72rem', backdropFilter: 'blur(6px)' }}
+            sx={{ fontWeight: 600, fontSize: '0.78rem' }}
           />
         </Box>
       )}
 
+      {/* ── Editor textarea ────────────────────────────────────────────── */}
       <textarea
-        ref={textareaRef}
         style={{
-          display:         'block',
+          flex:            '1 1 0',
+          minHeight:        0,
           width:           '100%',
           boxSizing:       'border-box',
-          padding:         '14px 16px',
+          padding:         '20px 24px',
           backgroundColor: isDark ? '#0f1117' : '#ffffff',
           color:           isDark ? '#e2e8f0' : '#1e293b',
           caretColor:      isDark ? '#7c8cf8' : '#4f46e5',
-          fontSize:        '14px',
-          lineHeight:      1.7,
-          fontFamily:      '"JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, monospace',
+          fontSize:        '16px',
+          lineHeight:      1.75,
+          fontFamily:      '"JetBrains Mono","Fira Code","Cascadia Code",Consolas,monospace',
           resize:          'none',
           whiteSpace:      'pre',
           overflowX:       'auto',
-          border:          `1.5px solid ${borderColor}`,
+          overflowY:       'auto',
+          border:          'none',
           outline:         'none',
-          transition:      'border-color 0.2s ease',
+          // Custom scrollbar
+          scrollbarWidth:  'thin',
+          scrollbarColor:  isDark
+            ? 'rgba(255,255,255,0.2) transparent'
+            : 'rgba(0,0,0,0.2) transparent',
         }}
         placeholder="Paste your JSON here…"
         autoFocus

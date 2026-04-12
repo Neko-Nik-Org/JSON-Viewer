@@ -11,7 +11,6 @@ import { useTheme }     from '@mui/material/styles';
 import { format }       from 'date-fns';
 
 import { useNotification } from '../context/NotificationContext';
-import { SHARE_BASE_URL }  from '../config/constants';
 
 
 const fmtDate = (ts) => {
@@ -26,8 +25,9 @@ const ShareDialog = ({ open, onClose, shareResult, shareError }) => {
   const { notify } = useNotification();
   const [copied, setCopied] = useState(false);
 
+  // Path-based share URL: origin/{id}  (e.g. https://jsonviewer.nekonik.com/abc123)
   const shareUrl = shareResult?.id
-    ? `${SHARE_BASE_URL}/?share=${shareResult.id}`
+    ? `${window.location.origin}/${shareResult.id}`
     : '';
 
   const handleCopy = () => {

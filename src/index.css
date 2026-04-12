@@ -1,33 +1,32 @@
-/* ── Reset & base ─────────────────────────────────────────────────────────── */
+/* ─── Reset & base ────────────────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html,
 body,
 #root {
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow-x: hidden;
 }
 
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.4);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.65); }
+/* ─── Scrollbars (webkit) ─────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 8px; height: 8px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(128,128,128,0.35); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.6); }
+::-webkit-scrollbar-corner { background: transparent; }
 
-/* ── Text selection ────────────────────────────────────────────────────────── */
-::selection { background: rgba(79, 70, 229, 0.25); }
+/* ─── Text selection ──────────────────────────────────────────────────────── */
+::selection { background: rgba(79, 70, 229, 0.22); }

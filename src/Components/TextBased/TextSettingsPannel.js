@@ -8,13 +8,13 @@ import ShareIcon          from '@mui/icons-material/Share';
 
 import { minifyJSON, beautifyJSON, clearData } from '../../Functions/JsonBased';
 import { postJsonData, getSharedJson }          from '../../Functions/ApiService';
-import { useCFToken }                           from '../../context/TurnstileContext';
+import { useTurnstile }                         from '../../context/TurnstileContext';
 import { useNotification }                       from '../../context/NotificationContext';
 import ShareDialog                              from '../ShareDialog';
 
 
 const TextSettingsPanel = ({ jsonData, setJsonData }) => {
-  const cfToken = useCFToken();
+  const { cfToken, requestToken } = useTurnstile();
   const { notify } = useNotification();
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -22,13 +22,13 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
   const [shareError,      setShareError]      = useState(null);
   const [sharing,         setSharing]         = useState(false);
 
-  // ── Load from share URL on mount ──────────────────────────────────────────
+  // ── Load from share URL on mount (path-based: /{id}) ─────────────────────
   useEffect(() => {
-    const shareId = new URLSearchParams(window.location.search).get('share');
-    if (!shareId) return;
+    const pathId = window.location.pathname.slice(1); // remove leading '/'
+    if (!pathId) return;
 
     setJsonData('// Loading shared JSON…');
-    getSharedJson(shareId, cfToken)
+    getSharedJson(pathId, cfToken)
       .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
       .catch(() => {
         setJsonData('');
@@ -50,9 +50,8 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
   };
 
   const handleClear = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('share');
-    window.history.replaceState({}, '', url.toString());
+    // Reset URL back to root (path-based share uses /{id})
+    window.history.replaceState({}, '', '/');
     clearData(setJsonData);
     setShareResult(null);
     setShareError(null);
@@ -77,10 +76,14 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
   };
 
   const handleShare = async () => {
+    // Trigger interactive Turnstile challenge before the API call
+    const token = await requestToken();
+    if (!token) return; // user cancelled challenge
+
     setSharing(true);
     try {
       const parsed = JSON.parse(jsonData);
-      const result = await postJsonData(parsed, cfToken);
+      const result = await postJsonData(parsed, token);
       setShareResult(result.data);
       setShareError(null);
     } catch (err) {
