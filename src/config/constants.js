@@ -1,6 +1,5 @@
 // ─── API ─────────────────────────────────────────────────────────────────────
-export const API_BASE_URL = 'https://api.nekonik.com/neko-nik/json-share';
-export const API_KEY = 'TMDRHRQSyWuRi0A0g40gS';
+export const API_BASE_URL = 'https://api2.nekonik.com/json-viewer';
 
 // ─── Cloudflare Turnstile ─────────────────────────────────────────────────────
 // Set REACT_APP_CF_TURNSTILE_SITE_KEY in your .env file.
@@ -8,10 +7,7 @@ export const API_KEY = 'TMDRHRQSyWuRi0A0g40gS';
 export const CF_TURNSTILE_SITE_KEY = '0x4AAAAAAC8XWNeUpN0H3YZP';
 
 // ─── App Metadata ─────────────────────────────────────────────────────────────
-export const APP_NAME = 'JSON Viewer';
-export const APP_VERSION = '1.0.0';
 export const ABOUT_URL = 'https://www.nekonik.com/about';
-export const SHARE_BASE_URL = 'https://jsonviewer.nekonik.com';
 
 // ─── Download ─────────────────────────────────────────────────────────────────
 export const DOWNLOAD_FILENAME = 'NekoNik-modified.json';

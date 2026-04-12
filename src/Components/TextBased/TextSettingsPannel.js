@@ -68,7 +68,7 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
     try {
       const parsed = JSON.parse(jsonData);
       const result = await postJsonData(parsed, token);
-      setShareResult(result.data);
+      setShareResult(result);
       setShareError(null);
     } catch (err) {
       setShareResult(null);

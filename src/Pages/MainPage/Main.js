@@ -76,9 +76,9 @@ const MainContent = () => {
         notify('Verification cancelled – shared JSON not loaded.', 'warning');
         return;
       }
-      setJsonData('// Loading shared JSON…');
+      setJsonData('{ "nekonik": "Loading shared JSON . . ." }');
       getSharedJson(pathId, token)
-        .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
+        .then(data => setJsonData(JSON.stringify(data, null, 2)))
         .catch(() => {
           setJsonData('');
           notify('Failed to load shared JSON. The link may have expired.', 'error');

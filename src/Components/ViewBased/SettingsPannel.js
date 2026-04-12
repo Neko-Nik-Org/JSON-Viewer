@@ -71,7 +71,7 @@ const SettingsPannel = ({
     try {
       const parsed = json5.parse(modJSON);
       const result = await postJsonData(parsed, token);
-      setShareResult(result.data);
+      setShareResult(result);
       setShareError(null);
     } catch (err) {
       setShareResult(null);
