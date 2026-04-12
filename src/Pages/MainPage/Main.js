@@ -8,8 +8,9 @@ import { Brightness4, Brightness7, DataObject } from '@mui/icons-material';
 
 import JSONViewer from '../Viewer/JSONViewer';
 import Text from '../TextPaste/Text';
-import { TurnstileProvider } from '../../context/TurnstileContext';
-import { NotificationProvider } from '../../context/NotificationContext';
+import { TurnstileProvider, useTurnstile } from '../../context/TurnstileContext';
+import { NotificationProvider, useNotification } from '../../context/NotificationContext';
+import { getSharedJson } from '../../Functions/ApiService';
 import { ABOUT_URL } from '../../config/constants';
 
 // ─── Theme Factory ────────────────────────────────────────────────────────────
@@ -58,10 +59,33 @@ const MainContent = () => {
   const theme      = React.useMemo(() => buildTheme(mode), [mode]);
   const isDark     = mode === 'dark';
   const isSmall    = useMediaQuery(theme.breakpoints.down('sm'));
+  const { requestToken } = useTurnstile();
+  const { notify }       = useNotification();
 
   React.useEffect(() => {
     localStorage.setItem('theme', mode);
   }, [mode]);
+
+  // ── Load from share URL once on app mount (path-based: /{id}) ────────────
+  React.useEffect(() => {
+    const pathId = window.location.pathname.slice(1);
+    if (!pathId) return;
+
+    requestToken().then((token) => {
+      if (!token) {
+        notify('Verification cancelled – shared JSON not loaded.', 'warning');
+        return;
+      }
+      setJsonData('// Loading shared JSON…');
+      getSharedJson(pathId, token)
+        .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
+        .catch(() => {
+          setJsonData('');
+          notify('Failed to load shared JSON. The link may have expired.', 'error');
+        });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleTheme = () => setMode(prev => (prev === 'light' ? 'dark' : 'light'));
 

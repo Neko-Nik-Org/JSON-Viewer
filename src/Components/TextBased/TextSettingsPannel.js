@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, Button, ButtonGroup, CircularProgress, Tooltip } from '@mui/material';
 import CompressIcon       from '@mui/icons-material/Compress';
 import AutoFixHighIcon    from '@mui/icons-material/AutoFixHigh';
@@ -7,7 +7,7 @@ import DeleteOutlineIcon  from '@mui/icons-material/DeleteOutline';
 import ShareIcon          from '@mui/icons-material/Share';
 
 import { minifyJSON, beautifyJSON, clearData } from '../../Functions/JsonBased';
-import { postJsonData, getSharedJson }          from '../../Functions/ApiService';
+import { postJsonData }                          from '../../Functions/ApiService';
 import { useTurnstile }                         from '../../context/TurnstileContext';
 import { useNotification }                       from '../../context/NotificationContext';
 import ShareDialog                              from '../ShareDialog';
@@ -21,28 +21,6 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
   const [shareResult,     setShareResult]     = useState(null);
   const [shareError,      setShareError]      = useState(null);
   const [sharing,         setSharing]         = useState(false);
-
-  // ── Load from share URL on mount (path-based: /{id}) ────────────────────
-  useEffect(() => {
-    const pathId = window.location.pathname.slice(1);
-    if (!pathId) return;
-
-    // Require a verified token BEFORE fetching the shared JSON
-    requestToken().then((token) => {
-      if (!token) {
-        notify('Verification cancelled – shared JSON not loaded.', 'warning');
-        return;
-      }
-      setJsonData('// Loading shared JSON…');
-      getSharedJson(pathId, token)
-        .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
-        .catch(() => {
-          setJsonData('');
-          notify('Failed to load shared JSON. The link may have expired.', 'error');
-        });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ── Toolbar actions ───────────────────────────────────────────────────────
   const handleMinify = () => {
