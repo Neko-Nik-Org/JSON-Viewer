@@ -14,7 +14,7 @@ import ShareDialog                              from '../ShareDialog';
 
 
 const TextSettingsPanel = ({ jsonData, setJsonData }) => {
-  const { cfToken, requestToken } = useTurnstile();
+  const { requestToken } = useTurnstile();
   const { notify } = useNotification();
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -22,19 +22,25 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
   const [shareError,      setShareError]      = useState(null);
   const [sharing,         setSharing]         = useState(false);
 
-  // ── Load from share URL on mount (path-based: /{id}) ─────────────────────
+  // ── Load from share URL on mount (path-based: /{id}) ────────────────────
   useEffect(() => {
-    const pathId = window.location.pathname.slice(1); // remove leading '/'
+    const pathId = window.location.pathname.slice(1);
     if (!pathId) return;
 
-    setJsonData('// Loading shared JSON…');
-    getSharedJson(pathId, cfToken)
-      .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
-      .catch(() => {
-        setJsonData('');
-        notify('Failed to load shared JSON. The link may have expired.', 'error');
-      });
-    // cfToken intentionally excluded – run only on mount
+    // Require a verified token BEFORE fetching the shared JSON
+    requestToken().then((token) => {
+      if (!token) {
+        notify('Verification cancelled – shared JSON not loaded.', 'warning');
+        return;
+      }
+      setJsonData('// Loading shared JSON…');
+      getSharedJson(pathId, token)
+        .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
+        .catch(() => {
+          setJsonData('');
+          notify('Failed to load shared JSON. The link may have expired.', 'error');
+        });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
