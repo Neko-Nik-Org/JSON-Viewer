@@ -1,97 +1,141 @@
-import { Box, Button, ButtonGroup } from '@mui/material';
-import ShareIcon from '@mui/icons-material/Share';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Box, Button, ButtonGroup, CircularProgress, Tooltip } from '@mui/material';
+import CompressIcon       from '@mui/icons-material/Compress';
+import AutoFixHighIcon    from '@mui/icons-material/AutoFixHigh';
+import FolderOpenIcon     from '@mui/icons-material/FolderOpen';
+import DeleteOutlineIcon  from '@mui/icons-material/DeleteOutline';
+import ShareIcon          from '@mui/icons-material/Share';
 
 import { minifyJSON, beautifyJSON, clearData } from '../../Functions/JsonBased';
-import { postJsonData, getSharedJson } from '../../Functions/ApiService';
-import ShareDialog from '../ShareDialog';
-
+import { postJsonData, getSharedJson }          from '../../Functions/ApiService';
+import { useCFToken }                           from '../../context/TurnstileContext';
+import { useNotification }                       from '../../context/NotificationContext';
+import ShareDialog                              from '../ShareDialog';
 
 
 const TextSettingsPanel = ({ jsonData, setJsonData }) => {
+  const cfToken = useCFToken();
+  const { notify } = useNotification();
+
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareResult, setShareResult] = useState(null);
-  const [shareError, setShareError] = useState(null);
+  const [shareResult,     setShareResult]     = useState(null);
+  const [shareError,      setShareError]      = useState(null);
+  const [sharing,         setSharing]         = useState(false);
 
-  // Only run once on initial mount
+  // ── Load from share URL on mount ──────────────────────────────────────────
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const shareId = urlParams.get('share');
+    const shareId = new URLSearchParams(window.location.search).get('share');
+    if (!shareId) return;
 
-    if (shareId) {
-      setJsonData('Loading . . .');
-      getSharedJson(shareId)
-        .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
-        .catch(() => setJsonData('{"error": "Failed to fetch shared JSON data."}'));
-    }
-  }, [setJsonData]);
+    setJsonData('// Loading shared JSON…');
+    getSharedJson(shareId, cfToken)
+      .then(data => setJsonData(JSON.stringify(data.data.content, null, 2)))
+      .catch(() => {
+        setJsonData('');
+        notify('Failed to load shared JSON. The link may have expired.', 'error');
+      });
+    // cfToken intentionally excluded – run only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleMinifyJSON = () => {
-    setJsonData(minifyJSON(jsonData));
+  // ── Toolbar actions ───────────────────────────────────────────────────────
+  const handleMinify = () => {
+    try   { setJsonData(minifyJSON(jsonData)); }
+    catch { notify('Cannot minify – JSON is not valid.', 'error'); }
   };
 
-  const handleBeautifyJSON = () => {
-    setJsonData(beautifyJSON(jsonData));
+  const handleBeautify = () => {
+    try   { setJsonData(beautifyJSON(jsonData)); }
+    catch { notify('Cannot beautify – JSON is not valid.', 'error'); }
   };
 
-  const handleClearData = () => {
-    // Clear the Path parameter from the URL
+  const handleClear = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('share');
     window.history.replaceState({}, '', url.toString());
-    // Clear the JSON data
-    setJsonData('');
-    // Optionally clear any shared data
+    clearData(setJsonData);
     setShareResult(null);
     setShareError(null);
-    // Call the clearData function to reset any other state if needed
-    clearData(setJsonData);
+    notify('Editor cleared.', 'info');
   };
 
-  const handleLoadJSONFile = () => {
+  const handleLoad = () => {
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-
-    input.onchange = e => {
-      const file = e.target.files[0];
+    input.type   = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = (e) => {
+      const file   = e.target.files[0];
+      if (!file) return;
       const reader = new FileReader();
-
-      reader.onload = event => {
-        setJsonData(event.target.result);
+      reader.onload = (ev) => {
+        setJsonData(ev.target.result);
+        notify(`Loaded: ${file.name}`, 'success');
       };
-
       reader.readAsText(file, 'UTF-8');
     };
-
     input.click();
   };
 
-  const handleShareJSON = async () => {
+  const handleShare = async () => {
+    setSharing(true);
     try {
       const parsed = JSON.parse(jsonData);
-      const result = await postJsonData(parsed);
+      const result = await postJsonData(parsed, cfToken);
       setShareResult(result.data);
       setShareError(null);
     } catch (err) {
       setShareResult(null);
-      setShareError(err.message || 'Invalid JSON');
+      setShareError(err.response?.data?.message || err.message || 'Sharing failed. Please try again.');
     } finally {
+      setSharing(false);
       setShareDialogOpen(true);
     }
   };
 
   return (
-    <Box sx={{ width: '100%', height: '100%', pb: 1 }}>
-      <ButtonGroup variant="outlined" size="medium">
-        <Button onClick={handleMinifyJSON}>Minify</Button>
-        <Button onClick={handleBeautifyJSON}>Beautify</Button>
-        <Button onClick={handleLoadJSONFile}>Load</Button>
-        <Button onClick={handleClearData}>Clear</Button>
-        <Button onClick={handleShareJSON} startIcon={<ShareIcon />}>
-          Share
-        </Button>
+    <Box
+      sx={{
+        width: '100%',
+        px: { xs: 1.5, sm: 2 },
+        py: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        flexWrap: 'wrap',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+      }}
+    >
+      <ButtonGroup variant="outlined" size="small">
+        <Tooltip title="Minify JSON">
+          <Button onClick={handleMinify} startIcon={<CompressIcon />}>Minify</Button>
+        </Tooltip>
+        <Tooltip title="Beautify / Format JSON">
+          <Button onClick={handleBeautify} startIcon={<AutoFixHighIcon />}>Beautify</Button>
+        </Tooltip>
+        <Tooltip title="Load from file">
+          <Button onClick={handleLoad} startIcon={<FolderOpenIcon />}>Load</Button>
+        </Tooltip>
+        <Tooltip title="Clear editor">
+          <Button onClick={handleClear} startIcon={<DeleteOutlineIcon />} color="error">Clear</Button>
+        </Tooltip>
       </ButtonGroup>
+
+      <Tooltip title="Share this JSON">
+        <span>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleShare}
+            disabled={sharing || !jsonData.trim()}
+            startIcon={sharing ? <CircularProgress size={14} color="inherit" /> : <ShareIcon />}
+            sx={{ fontWeight: 600 }}
+          >
+            {sharing ? 'Sharing…' : 'Share'}
+          </Button>
+        </span>
+      </Tooltip>
 
       <ShareDialog
         open={shareDialogOpen}
@@ -104,3 +148,4 @@ const TextSettingsPanel = ({ jsonData, setJsonData }) => {
 };
 
 export default TextSettingsPanel;
+

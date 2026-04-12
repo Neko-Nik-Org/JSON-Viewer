@@ -1,79 +1,148 @@
-import { Box, Button, ButtonGroup } from '@mui/material'
-import ShareIcon from '@mui/icons-material/Share';
-import json5 from 'json5'
-import { useState } from 'react';
-import ShareDialog from '../ShareDialog';
-import { postJsonData } from '../../Functions/ApiService';
+import React, { useState } from 'react';
+import { Box, Button, ButtonGroup, CircularProgress, Chip, Tooltip } from '@mui/material';
+import ShareIcon       from '@mui/icons-material/Share';
+import DownloadIcon    from '@mui/icons-material/Download';
+import EditIcon        from '@mui/icons-material/Edit';
+import EditOffIcon     from '@mui/icons-material/EditOff';
+import DataObjectIcon  from '@mui/icons-material/DataObject';
+import NumbersIcon     from '@mui/icons-material/Numbers';
+import json5 from 'json5';
+
+import ShareDialog         from '../ShareDialog';
+import { postJsonData }    from '../../Functions/ApiService';
+import { useCFToken }      from '../../context/TurnstileContext';
+import { useNotification } from '../../context/NotificationContext';
+import { DOWNLOAD_FILENAME } from '../../config/constants';
 
 
-const SettingsPannel = ({ displayDataTypes, setDisplayDataTypes,
-                          displayObjectSize, setDisplayObjectSize,
-                          enableEditing, setEnableEditing, modJSON }) => {
+const ToggleChip = ({ label, icon, activeIcon, active, onToggle, activeColor = 'primary' }) => (
+  <Tooltip title={`${active ? 'Hide' : 'Show'} ${label}`}>
+    <Chip
+      icon={active ? activeIcon : icon}
+      label={label}
+      size="small"
+      onClick={onToggle}
+      variant={active ? 'filled' : 'outlined'}
+      color={active ? activeColor : 'default'}
+      sx={{ fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem' }}
+    />
+  </Tooltip>
+);
 
-    const [shareDialogOpen, setShareDialogOpen] = useState(false);
-    const [shareResult, setShareResult] = useState(null);
-    const [shareError, setShareError] = useState(null);
 
-    const ModButton = ({ text, state, setState }) => {
-      // state is a boolean
+const SettingsPannel = ({
+  displayDataTypes,  setDisplayDataTypes,
+  displayObjectSize, setDisplayObjectSize,
+  enableEditing,     setEnableEditing,
+  modJSON,
+}) => {
+  const cfToken  = useCFToken();
+  const { notify } = useNotification();
 
-      const handleClick = () => {
-        setState(!state)
-      }
-      // The button color is based on the state of the button
-      return (
-        <Button
-          onClick={handleClick}
-          variant='outlined'
-          color={state ? 'success' : 'error'}
-        >
-          {text}
-        </Button>
-      )
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareResult,     setShareResult]     = useState(null);
+  const [shareError,      setShareError]      = useState(null);
+  const [sharing,         setSharing]         = useState(false);
+
+  const handleDownload = () => {
+    try {
+      const pretty   = JSON.stringify(json5.parse(modJSON), null, 2);
+      const blob     = new Blob([pretty], { type: 'application/json' });
+      const url      = URL.createObjectURL(blob);
+      const anchor   = document.createElement('a');
+      anchor.href    = url;
+      anchor.download = DOWNLOAD_FILENAME;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      notify('JSON downloaded successfully.', 'success');
+    } catch {
+      notify('Download failed – JSON is invalid.', 'error');
     }
+  };
 
-    const handleDownload = () => {
-      // Download the modified JSON file as a .json file prompt user to save
-      const element = document.createElement('a')
-      const file = new Blob([JSON.stringify(json5.parse(modJSON), null, 2)], {type: 'text/plain'})
-      element.href = URL.createObjectURL(file)
-      element.download = 'NekoNik-modifiedJSON.json'
-      document.body.appendChild(element)
-      element.click()
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      const parsed = json5.parse(modJSON);
+      const result = await postJsonData(parsed, cfToken);
+      setShareResult(result.data);
+      setShareError(null);
+    } catch (err) {
+      setShareResult(null);
+      setShareError(err.response?.data?.message || err.message || 'Sharing failed. Please try again.');
+    } finally {
+      setSharing(false);
+      setShareDialogOpen(true);
     }
+  };
 
-    const handleShareJSON = async () => {
-      try {
-        const parsed = json5.parse(modJSON);
-        const result = await postJsonData(parsed);
-        setShareResult(result.data);
-        setShareError(null);
-      } catch (err) {
-        setShareResult(null);
-        setShareError(err.message || 'Invalid JSON');
-      } finally {
-        setShareDialogOpen(true);
-      }
-    };
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        px: { xs: 1.5, sm: 2 },
+        py: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        flexWrap: 'wrap',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+      }}
+    >
+      {/* View toggles */}
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <ToggleChip
+          label="Data Types"
+          icon={<DataObjectIcon />}
+          activeIcon={<DataObjectIcon />}
+          active={displayDataTypes}
+          onToggle={() => setDisplayDataTypes(v => !v)}
+        />
+        <ToggleChip
+          label="Object Size"
+          icon={<NumbersIcon />}
+          activeIcon={<NumbersIcon />}
+          active={displayObjectSize}
+          onToggle={() => setDisplayObjectSize(v => !v)}
+        />
+        <ToggleChip
+          label="Edit Mode"
+          icon={<EditOffIcon />}
+          activeIcon={<EditIcon />}
+          active={enableEditing}
+          onToggle={() => setEnableEditing(v => !v)}
+          activeColor="warning"
+        />
+      </Box>
 
-    return (
-        <Box sx={{ width: '100%', height: '100%', pb: 2 }}>
-            <ButtonGroup variant="outlined" aria-label="outlined primary button group" size='secondary'>
-                <ModButton text='Data Types' state={displayDataTypes} setState={setDisplayDataTypes} />
-                <ModButton text='Object Size' state={displayObjectSize} setState={setDisplayObjectSize} />
-                <ModButton text='Edit' state={enableEditing} setState={setEnableEditing} />
-                <Button text='Download' onClick={handleDownload} variant='outlined' color='secondary'>Download</Button>
-                <Button onClick={handleShareJSON} startIcon={<ShareIcon />}>Share</Button>
-            </ButtonGroup>
+      {/* Action buttons */}
+      <ButtonGroup variant="outlined" size="small">
+        <Tooltip title="Download as .json file">
+          <Button onClick={handleDownload} startIcon={<DownloadIcon />}>Download</Button>
+        </Tooltip>
+        <Tooltip title="Share this JSON">
+          <Button
+            onClick={handleShare}
+            disabled={sharing}
+            startIcon={sharing ? <CircularProgress size={14} color="inherit" /> : <ShareIcon />}
+          >
+            {sharing ? 'Sharing…' : 'Share'}
+          </Button>
+        </Tooltip>
+      </ButtonGroup>
 
-            <ShareDialog
-              open={shareDialogOpen}
-              onClose={() => setShareDialogOpen(false)}
-              shareResult={shareResult}
-              shareError={shareError}
-            />
-        </Box>
-    )
-}
+      <ShareDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        shareResult={shareResult}
+        shareError={shareError}
+      />
+    </Box>
+  );
+};
 
-export default SettingsPannel
+export default SettingsPannel;

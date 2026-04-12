@@ -1,123 +1,145 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  IconButton,
-  Tooltip,
-  Snackbar,
-  Alert,
-  Divider,
+  Box, Button, Dialog, DialogTitle, DialogContent, DialogActions,
+  Typography, IconButton, Tooltip, Divider, Stack,
 } from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import { format } from 'date-fns';
+import ContentCopyIcon  from '@mui/icons-material/ContentCopy';
+import OpenInNewIcon    from '@mui/icons-material/OpenInNew';
+import CheckCircleIcon  from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { useTheme }     from '@mui/material/styles';
+import { format }       from 'date-fns';
 
-const formatTimestamp = (timestamp) => {
-  try {
-    return format(new Date(timestamp), "dd MMM yyyy, hh:mm a 'UTC'");
-  } catch {
-    return timestamp;
-  }
+import { useNotification } from '../context/NotificationContext';
+import { SHARE_BASE_URL }  from '../config/constants';
+
+
+const fmtDate = (ts) => {
+  try { return format(new Date(ts), "dd MMM yyyy, hh:mm a 'UTC'"); }
+  catch { return ts || '—'; }
 };
 
-const ShareDialog = ({ open, onClose, shareResult, shareError }) => {
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const handleCopy = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setSnackbarOpen(true);
+const ShareDialog = ({ open, onClose, shareResult, shareError }) => {
+  const theme      = useTheme();
+  const isDark     = theme.palette.mode === 'dark';
+  const { notify } = useNotification();
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = shareResult?.id
+    ? `${SHARE_BASE_URL}/?share=${shareResult.id}`
+    : '';
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      notify('Link copied to clipboard!', 'success');
+      setTimeout(() => setCopied(false), 2500);
     });
   };
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const shareUrl = shareResult
-    ? `https://jsonviewer.nekonik.com/?share=${shareResult.id}`
-    : '';
-
   return (
-    <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {shareError ? 'Error Sharing JSON' : '🎉 JSON Shared Successfully'}
-        </DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+        },
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+        {shareError
+          ? <><ErrorOutlineIcon color="error" /> Error Sharing JSON</>
+          : <><CheckCircleIcon  color="success" /> JSON Shared Successfully</>
+        }
+      </DialogTitle>
 
-        <DialogContent dividers>
-          {shareError ? (
-            <Typography color="error">{shareError}</Typography>
-          ) : (
-            <>
-              <Typography gutterBottom>
-                Here’s your shareable link:
-                <Tooltip title="Copy link">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopy(shareUrl)}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Typography>
+      <DialogContent dividers>
+        {shareError ? (
+          <Typography color="error" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ErrorOutlineIcon fontSize="small" /> {shareError}
+          </Typography>
+        ) : (
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              Use the link below to share this JSON with anyone.
+            </Typography>
 
-              <Box
-                onClick={() => handleCopy(shareUrl)}
+            <Box
+              sx={{
+                display:     'flex',
+                alignItems:  'center',
+                gap:         1,
+                p:           1.5,
+                borderRadius: 2,
+                bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                border:  `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                cursor:  'pointer',
+                '&:hover': {
+                  bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+                },
+              }}
+              onClick={handleCopy}
+            >
+              <Typography
+                variant="body2"
                 sx={{
-                  p: 1.5,
-                  border: '1px solid #ccc',
-                  borderRadius: 2,
-                  bgcolor: '#333', //Dark Mode
-                  position: 'relative',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: '#444', //Dark mode
-                  },
-                  mb: 2,
+                  flex: 1, wordBreak: 'break-all',
+                  fontFamily: 'monospace', color: 'text.primary', fontSize: '0.82rem',
                 }}
               >
-                <Typography variant="body2" sx={{ wordBreak: 'break-all', color: '#fff' }}> 
-                    {shareUrl}
-                </Typography>
-              </Box>
+                {shareUrl}
+              </Typography>
 
-              <Divider sx={{ my: 1 }} />
+              <Tooltip title={copied ? 'Copied!' : 'Copy link'}>
+                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopy(); }}>
+                  {copied
+                    ? <CheckCircleIcon fontSize="small" color="success" />
+                    : <ContentCopyIcon fontSize="small" />
+                  }
+                </IconButton>
+              </Tooltip>
 
+              <Tooltip title="Open in new tab">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <OpenInNewIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            <Divider />
+
+            <Stack direction="row" spacing={4}>
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Created: {formatTimestamp(shareResult?.created_at)}
-                </Typography>
-                <br />
-                <Typography variant="caption" color="text.secondary">
-                  Expires: {formatTimestamp(shareResult?.expires_at)}
-                </Typography>
+                <Typography variant="caption" color="text.disabled" display="block">Created</Typography>
+                <Typography variant="body2">{fmtDate(shareResult?.created_at)}</Typography>
               </Box>
-            </>
-          )}
-        </DialogContent>
+              <Box>
+                <Typography variant="caption" color="text.disabled" display="block">Expires</Typography>
+                <Typography variant="body2">{fmtDate(shareResult?.expires_at)}</Typography>
+              </Box>
+            </Stack>
+          </Stack>
+        )}
+      </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose} variant="contained">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleSnackbarClose} severity="success" variant="filled">
-          Link copied to clipboard!
-        </Alert>
-      </Snackbar>
-    </>
+      <DialogActions sx={{ px: 3, py: 1.5 }}>
+        <Button onClick={onClose} variant="contained" disableElevation>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

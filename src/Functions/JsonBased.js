@@ -2,39 +2,32 @@ import json5 from "json5";
 
 // Check if a string is a valid JSON
 function isValidJSON(stringData) {
+    if (!stringData || !stringData.trim()) return false;
     try {
         json5.parse(stringData);
+        return true;
     } catch (e) {
         return false;
     }
-    return true;
-};
+}
 
 
-// Minify a JSON object
+// Minify a JSON string – throws if invalid (let callers show the UI error)
 function minifyJSON(jsonData) {
-    if (isValidJSON(jsonData)) {
-        return JSON.stringify(json5.parse(jsonData))
-    } else {
-        alert('Cats! The JSON is not valid!')
-    }
-};
+    return JSON.stringify(json5.parse(jsonData));
+}
 
 
-// Beautify a JSON object
+// Beautify a JSON string – throws if invalid (let callers show the UI error)
 function beautifyJSON(jsonData) {
-    if (isValidJSON(jsonData)) {
-        return JSON.stringify(json5.parse(jsonData), null, 2)
-    } else {
-        alert('Cats! The JSON is not valid!')
-    }
-};
+    return JSON.stringify(json5.parse(jsonData), null, 2);
+}
 
 
-// clear setXXXData
+// Reset editor content
 function clearData(setXXXData) {
-    setXXXData('')
-};
+    setXXXData('');
+}
 
 
-export { isValidJSON , minifyJSON , beautifyJSON , clearData };
+export { isValidJSON, minifyJSON, beautifyJSON, clearData };

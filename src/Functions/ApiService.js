@@ -1,39 +1,36 @@
 import axios from 'axios';
+import { API_BASE_URL, API_KEY } from '../config/constants';
 
-const BASE_URL = 'https://api.nekonik.com/neko-nik/json-share';
-const API_KEY = 'TMDRHRQSyWuRi0A0g40gS';
-const HEADERS = {
+// Build headers, injecting CF Turnstile token when available
+const buildHeaders = (cfToken) => ({
   'Content-Type': 'application/json',
-  'API-Key': API_KEY
-};
+  'API-Key': API_KEY,
+  ...(cfToken ? { 'X-CF-Token': cfToken } : {}),
+});
 
 
-const postJsonData = async (jsonData) => {
+const postJsonData = async (jsonData, cfToken = null) => {
   try {
-    const response = await axios.post(BASE_URL, jsonData, {headers: HEADERS});
+    const response = await axios.post(API_BASE_URL, jsonData, { headers: buildHeaders(cfToken) });
     if (response.status !== 201) {
       throw new Error(`Unexpected response status: ${response.status}`);
     }
-
     return response.data;
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error posting JSON data:', error);
     throw error;
   }
 };
 
 
-const getSharedJson = async (uuid) => {
+const getSharedJson = async (uuid, cfToken = null) => {
   try {
-    const response = await axios.get(`${BASE_URL}/${uuid}`, {headers: HEADERS});
+    const response = await axios.get(`${API_BASE_URL}/${uuid}`, { headers: buildHeaders(cfToken) });
     if (response.status !== 200) {
       throw new Error(`Unexpected response status: ${response.status}`);
     }
-
     return response.data;
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error fetching shared JSON:', error);
     throw error;
   }
